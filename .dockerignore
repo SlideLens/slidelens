@@ -1,0 +1,15 @@
+# Keep the build context small and avoid baking host-specific artifacts in.
+**/.venv/
+**/node_modules/
+**/__pycache__/
+**/*.pyc
+**/dist/
+**/.pytest_cache/
+**/.ruff_cache/
+backend/storage/
+backend/tests/golden/generated/
+.env
+.env.*
+!.env.example
+.git/
+.gitignore

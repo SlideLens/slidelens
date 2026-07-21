@@ -1,0 +1,8 @@
+- slide_num: 2
+  category: TYPOGRAPHY
+  description: >
+    Основной текст слайда набран нечитаемо мелким шрифтом (8pt) для проекции.
+- slide_num: 4
+  category: CONSISTENCY
+  description: >
+    Слайды 3 и 4 дублируют друг друга — одинаковый текст про команду.

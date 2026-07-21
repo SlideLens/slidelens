@@ -1,0 +1,20 @@
+import type { components } from "@/api/types.gen";
+
+export type Finding = components["schemas"]["Finding"];
+export type Category = components["schemas"]["Category"];
+export type Severity = components["schemas"]["Severity"];
+export type BBox = components["schemas"]["BBox"];
+export type DeliveryMetrics = components["schemas"]["DeliveryMetrics"];
+export type ReportOut = components["schemas"]["ReportOut"];
+export type ReviewOut = components["schemas"]["ReviewOut"];
+export type ReviewStatus = components["schemas"]["ReviewStatus"];
+export type User = components["schemas"]["User"];
+export type AuthTokens = components["schemas"]["AuthTokens"];
+export type SlideOut = components["schemas"]["SlideOut"];
+export type RehearsalStatus = components["schemas"]["RehearsalStatus"];
+export type RehearsalOut = components["schemas"]["RehearsalOut"];
+export type SlideTimingIn = components["schemas"]["SlideTimingIn"];
+export type TimingMapEntry = components["schemas"]["TimingMapEntry"];
+export type RehearsalFinding = components["schemas"]["RehearsalFinding"];
+export type RehearsalDelta = components["schemas"]["RehearsalDelta"];
+export type RehearsalReportOut = components["schemas"]["RehearsalReportOut"];

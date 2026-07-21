@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Разбор — Скор {{ report.score }}</title>
+<style>
+  body { font-family: "DejaVu Sans", "Arial", sans-serif; color: #111827; margin: 2rem; }
+  h1 { font-size: 1.5rem; }
+  .score { font-size: 2rem; font-weight: bold; }
+  .meta { color: #6b7280; margin-bottom: 1.5rem; }
+  .slide-section { margin-bottom: 1.5rem; page-break-inside: avoid; }
+  .slide-section h2 { font-size: 1.1rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.25rem; }
+  .finding { border-left: 4px solid #6b7280; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; }
+  .finding.CRITICAL { border-color: #dc2626; }
+  .finding.MAJOR { border-color: #f97316; }
+  .finding.MINOR { border-color: #6b7280; }
+  .finding-title { font-weight: bold; }
+  .finding-meta { font-size: 0.85rem; color: #6b7280; }
+  .badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 0.25rem; font-size: 0.75rem; background: #f3f4f6; }
+</style>
+</head>
+<body>
+  <h1>Разбор презентации</h1>
+  <div class="score">Скор: {{ report.score }} / 100</div>
+  <div class="meta">
+    Слайдов: {{ report.n_slides }} ·
+    Находок: {{ report.findings | length }} ·
+    Автоисправлено: {{ report.auto_fixed_count }}
+  </div>
+
+  {% if report.delivery %}
+  <div class="slide-section">
+    <h2>Подача</h2>
+    <p>Темп речи: {{ "%.0f"|format(report.delivery.words_per_minute) }} слов/мин</p>
+    {% if report.delivery.filler_words %}
+    <p>Слова-паразиты: {% for word, count in report.delivery.filler_words.items() %}{{ word }} ({{ count }}){% if not loop.last %}, {% endif %}{% endfor %}</p>
+    {% endif %}
+    {% if report.delivery.long_pauses %}
+    <p>Длинных пауз: {{ report.delivery.long_pauses | length }}</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% for slide_num, findings in findings_by_slide.items() %}
+  <div class="slide-section">
+    <h2>{% if slide_num %}Слайд {{ slide_num }}{% else %}Дека целиком{% endif %}</h2>
+    {% for finding in findings %}
+    <div class="finding {{ finding.severity.value }}">
+      <div class="finding-title">{{ finding.title }}</div>
+      <div class="finding-meta">
+        <span class="badge">{{ finding.category.value }}</span>
+        <span class="badge">{{ finding.severity.value }}</span>
+        {% if finding.auto_fixed %}<span class="badge">исправлено автоматически</span>{% endif %}
+      </div>
+      <p>{{ finding.description }}</p>
+      <p><em>{{ finding.fix_suggestion }}</em></p>
+      {% if finding.id in annotations %}
+      <img src="{{ annotations[finding.id] }}" alt="Аннотированный слайд {{ slide_num }}" style="max-width: 100%;">
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</body>
+</html>

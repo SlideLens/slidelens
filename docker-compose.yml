@@ -1,0 +1,137 @@
+# Single stack for local MVP and production (ADR 0004).
+# SPA is baked into the app image; Caddy is the public entrypoint.
+#
+# Env: one file — backend/.env (copy from backend/.env.example).
+# Compose loads it for containers AND for ${VAR} interpolation via --env-file
+# (see README). Or set COMPOSE_ENV_FILES=backend/.env in your shell.
+#
+#   cp backend/.env.example backend/.env
+#   docker compose --env-file backend/.env up -d --build
+#   docker compose --env-file backend/.env exec app alembic upgrade head
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    env_file:
+      - path: backend/.env
+        required: false
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - path: backend/.env
+        required: false
+    environment:
+      POSTGRES_USER: slidelens
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-slidelens}
+      POSTGRES_DB: slidelens
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U slidelens"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: slidelens:latest
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    env_file:
+      - path: backend/.env
+        required: false
+    environment:
+      # Docker network overrides (win over backend/.env localhost values)
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: slidelens
+      DB_USER: slidelens
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-slidelens}
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_ROOT: /app/backend/storage
+      STATIC_DIR: /app/static
+      # Also in env_file; listed here so --env-file interpolation is obvious
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+    volumes:
+      - storage:/app/backend/storage
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: slidelens:latest
+    restart: unless-stopped
+    command: arq worker.tasks.WorkerSettings
+    env_file:
+      - path: backend/.env
+        required: false
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: slidelens
+      DB_USER: slidelens
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-slidelens}
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_ROOT: /app/backend/storage
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+    volumes:
+      - storage:/app/backend/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  storage:
+  caddy_data:
+  caddy_config:
